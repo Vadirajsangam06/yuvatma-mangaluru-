@@ -86,6 +86,7 @@ model User {
   notifications Notification[]
   invitationsReceived Invitation[] @relation("ReceivedInvitations")
   invitationsSent     Invitation[] @relation("SentInvitations")
+  passwordResetTokens PasswordResetToken[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -218,3 +219,17 @@ model Invitation {
   @@index([eventId])
   @@index([userId])
 }
+
+model PasswordResetToken {
+  id        String    @id @default(uuid())
+  tokenHash String    @unique
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([tokenHash])
+  @@index([userId])
+}
+

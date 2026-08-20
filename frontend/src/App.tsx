@@ -5,6 +5,8 @@ import { api } from './api/client';
 import type { Event } from './types';
 import Login from './pages/public/Login';
 import Register from './pages/public/Register';
+import ForgotPassword from './pages/public/ForgotPassword';
+import ResetPassword from './pages/public/ResetPassword';
 import CreateEvent from './pages/protected/CreateEvent';
 import Explore from './pages/protected/Explore';
 import EventDetails from './pages/protected/EventDetails';
@@ -217,6 +219,8 @@ export default function App() {
       <Route path="/" element={<Home />} />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
       <Route
         path="/events/create"
         element={

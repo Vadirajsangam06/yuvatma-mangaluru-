@@ -28,7 +28,7 @@ export async function listEventsHandler(_req: Request, res: Response) {
 
 export async function getEventCalendarHandler(req: Request, res: Response) {
   try {
-    const event = await getEventById(req.params.id);
+    const event = await getEventById(req.params.id as string);
     if (!event) return sendError(res, 'Event not found', 404);
 
     const frontendOrigin = env.CORS_ORIGINS[0];
@@ -58,7 +58,7 @@ export async function getEventCalendarHandler(req: Request, res: Response) {
 
 export async function getEventByIdHandler(req: Request, res: Response) {
   try {
-    const event = await getEventById(req.params.id);
+    const event = await getEventById(req.params.id as string);
     if (!event) return sendError(res, 'Event not found', 404);
     sendSuccess(res, event);
   } catch (error: any) {
@@ -72,7 +72,7 @@ export async function updateEventHandler(req: Request, res: Response) {
     if (!hostId) return sendError(res, 'Unauthorized', 401);
 
     const data = updateEventSchema.parse(req.body);
-    const event = await updateEvent(req.params.id, hostId, data);
+    const event = await updateEvent(req.params.id as string, hostId, data);
     sendSuccess(res, event, 'Event updated successfully');
   } catch (error: any) {
     if (error.name === 'ZodError') {
@@ -87,7 +87,7 @@ export async function cancelEventHandler(req: Request, res: Response) {
     const hostId = req.user?.id;
     if (!hostId) return sendError(res, 'Unauthorized', 401);
 
-    const event = await cancelEvent(req.params.id, hostId);
+    const event = await cancelEvent(req.params.id as string, hostId);
     sendSuccess(res, event, 'Event cancelled successfully');
   } catch (error: any) {
     sendError(res, error.message, 400);
@@ -99,7 +99,7 @@ export async function restoreEventHandler(req: Request, res: Response) {
     const hostId = req.user?.id;
     if (!hostId) return sendError(res, 'Unauthorized', 401);
 
-    const event = await restoreEvent(req.params.id, hostId);
+    const event = await restoreEvent(req.params.id as string, hostId);
     sendSuccess(res, event, 'Event restored successfully');
   } catch (error: any) {
     sendError(res, error.message, 400);
@@ -111,7 +111,7 @@ export async function attendEventHandler(req: Request, res: Response) {
     const userId = req.user?.id;
     if (!userId) return sendError(res, 'Unauthorized', 401);
 
-    const rsvp = await attendEvent(req.params.id, userId);
+    const rsvp = await attendEvent(req.params.id as string, userId);
     sendSuccess(res, rsvp, 'You are now attending this event', 201);
   } catch (error: any) {
     sendError(res, error.message, 400);

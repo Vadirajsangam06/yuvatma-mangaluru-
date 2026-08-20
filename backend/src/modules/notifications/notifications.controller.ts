@@ -19,7 +19,7 @@ export async function markNotificationReadHandler(req: Request, res: Response) {
     const userId = req.user?.id;
     if (!userId) return sendError(res, 'Unauthorized', 401);
 
-    const notification = await markAsRead(req.params.id, userId);
+    const notification = await markAsRead(req.params.id as string, userId);
     sendSuccess(res, notification, 'Notification marked as read');
   } catch (error: any) {
     sendError(res, error.message, 400);
