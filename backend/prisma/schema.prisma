@@ -1,0 +1,220 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+
+// ─────────────────────────────────────────────────────────────
+// Enums
+// ─────────────────────────────────────────────────────────────
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum Visibility {
+  PUBLIC
+  PRIVATE
+}
+
+enum EventStatus {
+  ACTIVE
+  CANCELLED
+  COMPLETED
+}
+
+enum RsvpStatus {
+  CONFIRMED
+  CANCELLED
+}
+
+enum NotificationType {
+  REMINDER_24H
+  REMINDER_12H
+  REMINDER_1H
+  EVENT_CANCELLED
+  RSVP_CONFIRMED
+  EVENT_INVITATION
+  INVITATION_ACCEPTED
+  INVITATION_DECLINED
+  EVENT_UPDATED
+}
+
+enum NotificationStatus {
+  PENDING
+  SENT
+  FAILED
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+}
+
+// ─────────────────────────────────────────────────────────────
+// Models
+// ─────────────────────────────────────────────────────────────
+
+model User {
+  id            String    @id @default(uuid())
+  name          String
+  email         String    @unique
+  phone         String?
+  passwordHash  String?   // nullable → leaves room for Google OAuth later
+  profileImage  String?
+  role          Role      @default(USER)
+  fcmToken      String?   // Firebase push token
+  bio           String?
+  location      String?
+
+  notifyInApp    Boolean @default(true)
+  notifyEmail    Boolean @default(true)
+  notifyWhatsapp Boolean @default(false)
+
+  events        Event[]         @relation("HostEvents")
+  rsvps         Rsvp[]
+  bookmarks     Bookmark[]
+  notifications Notification[]
+  invitationsReceived Invitation[] @relation("ReceivedInvitations")
+  invitationsSent     Invitation[] @relation("SentInvitations")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([email])
+}
+
+model EventCategory {
+  id     String  @id @default(uuid())
+  name   String  @unique  // e.g. "Satyanarayana Pooja"
+  icon   String?          // emoji or icon key for UI
+  order  Int     @default(0) // display sort order
+
+  events Event[]
+}
+
+model Event {
+  id            String      @id @default(uuid())
+  slug          String      @unique  // shareable URL slug
+  title         String
+  description   String
+  date          DateTime    // date portion used; stored as full timestamp (UTC midnight)
+  startTime     String      // "HH:MM" stored as string; avoids timezone nightmares
+  endTime       String?
+  address       String
+  mapsUrl       String?
+  latitude      Float
+  longitude     Float
+  contactNumber String?
+  imageUrl      String?
+  visibility    Visibility  @default(PUBLIC)
+  maxAttendees  Int?
+  status        EventStatus @default(ACTIVE)
+  rsvpCount     Int         @default(0) // denormalized counter
+
+  hostId      String
+  host        User          @relation("HostEvents", fields: [hostId], references: [id], onDelete: Cascade)
+
+  categoryId  String
+  category    EventCategory @relation(fields: [categoryId], references: [id])
+
+  rsvps         Rsvp[]
+  bookmarks     Bookmark[]
+  notifications Notification[]
+  invitations   Invitation[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([date, status, visibility])
+  @@index([hostId])
+  @@index([categoryId])
+  @@index([latitude, longitude])
+  @@index([slug])
+}
+
+model Rsvp {
+  id      String     @id @default(uuid())
+  status  RsvpStatus @default(CONFIRMED)
+
+  eventId String
+  event   Event  @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  userId  String
+  user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([eventId, userId])  // prevent duplicate RSVPs
+  @@index([eventId])
+  @@index([userId])
+}
+
+model Bookmark {
+  id String @id @default(uuid())
+
+  userId  String
+  user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  eventId String
+  event   Event  @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([userId, eventId])
+  @@index([userId])
+}
+
+model Notification {
+  id           String             @id @default(uuid())
+  type         NotificationType
+  title        String             @default("")
+  message      String             @default("")
+  isRead       Boolean            @default(false)
+  scheduledFor DateTime           @default(now())
+  sentAt       DateTime?
+  status       NotificationStatus @default(PENDING)
+
+  userId  String
+  user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  eventId String
+  event   Event  @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([scheduledFor, status]) // cron queries this index
+  @@index([userId, isRead])
+  @@index([userId])
+}
+
+model Invitation {
+  id     String           @id @default(uuid())
+  status InvitationStatus @default(PENDING)
+
+  eventId String
+  event   Event  @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   User   @relation("ReceivedInvitations", fields: [userId], references: [id], onDelete: Cascade)
+
+  invitedById String
+  invitedBy   User   @relation("SentInvitations", fields: [invitedById], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([eventId, userId]) // prevent duplicate invitations
+  @@index([eventId])
+  @@index([userId])
+}
